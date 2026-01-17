@@ -1,0 +1,6 @@
+name: CpsCounter
+main: gg.pigraid.CpsCounter.CpsCounter
+version: 1.0.0
+api: ["1.0.0"]
+author: PigRaid
+description: Displays CPS (clicks per second) and combo counter to players
