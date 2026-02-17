@@ -14,6 +14,8 @@ import cn.nukkit.plugin.PluginBase;
 import cn.nukkit.utils.TextFormat;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
  * CpsCounter - Displays CPS (clicks per second) and combo counter to players
@@ -23,8 +25,8 @@ public class CpsCounter extends PluginBase implements Listener {
     private static final int MAX_CLICKS = 100;
     private static final double RESET_THRESHOLD = 2.0; // Reset combo after 2 seconds
 
-    private final Map<UUID, Queue<Long>> clicksData = new HashMap<>();
-    private final Map<UUID, Integer> combosData = new HashMap<>();
+    private final Map<UUID, Deque<Long>> clicksData = new ConcurrentHashMap<>();
+    private final Map<UUID, Integer> combosData = new ConcurrentHashMap<>();
 
     @Override
     public void onEnable() {
@@ -34,7 +36,7 @@ public class CpsCounter extends PluginBase implements Listener {
         getServer().getScheduler().scheduleDelayedRepeatingTask(this, () -> {
             long now = System.currentTimeMillis();
             for (UUID uuid : new HashSet<>(clicksData.keySet())) {
-                Queue<Long> clicks = clicksData.get(uuid);
+                Deque<Long> clicks = clicksData.get(uuid);
                 if (clicks == null || clicks.isEmpty()) {
                     continue;
                 }
@@ -42,16 +44,14 @@ public class CpsCounter extends PluginBase implements Listener {
                 // Remove clicks older than 1 second
                 clicks.removeIf(click -> click < now - 1000);
 
-                try {
-                    // Reset combo if no clicks for 2 seconds
-                    long lastClick = ((LinkedList<Long>) clicks).getLast();
+                // Reset combo if no clicks for 2 seconds
+                Long lastClick = clicks.peekLast();
+                if (lastClick != null) {
                     double timeSinceLastClick = (now - lastClick) / 1000.0;
                     if (timeSinceLastClick > RESET_THRESHOLD) {
                         clicks.clear();
                         combosData.put(uuid, 0);
                     }
-                } catch (NoSuchElementException e) {
-                    // Queue is empty
                 }
             }
         }, 10, 10);
@@ -60,7 +60,7 @@ public class CpsCounter extends PluginBase implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         UUID uuid = event.getPlayer().getUniqueId();
-        clicksData.putIfAbsent(uuid, new LinkedList<>());
+        clicksData.putIfAbsent(uuid, new ConcurrentLinkedDeque<>());
         combosData.putIfAbsent(uuid, 0);
     }
 
@@ -111,7 +111,7 @@ public class CpsCounter extends PluginBase implements Listener {
 
     private void addClick(Player player) {
         UUID uuid = player.getUniqueId();
-        Queue<Long> queue = clicksData.computeIfAbsent(uuid, k -> new LinkedList<>());
+        Deque<Long> queue = clicksData.computeIfAbsent(uuid, k -> new ConcurrentLinkedDeque<>());
         queue.add(System.currentTimeMillis());
 
         // Keep only recent clicks
@@ -131,7 +131,7 @@ public class CpsCounter extends PluginBase implements Listener {
 
     private int getCps(Player player) {
         UUID uuid = player.getUniqueId();
-        Queue<Long> queue = clicksData.get(uuid);
+        Deque<Long> queue = clicksData.get(uuid);
         if (queue == null || queue.isEmpty()) {
             return 0;
         }
