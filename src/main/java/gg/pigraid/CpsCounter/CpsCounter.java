@@ -13,6 +13,8 @@ import cn.nukkit.network.protocol.InventoryTransactionPacket;
 import cn.nukkit.plugin.PluginBase;
 import cn.nukkit.utils.TextFormat;
 
+import cn.nukkit.utils.Config;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -27,9 +29,12 @@ public class CpsCounter extends PluginBase implements Listener {
 
     private final Map<UUID, Deque<Long>> clicksData = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> combosData = new ConcurrentHashMap<>();
+    private final Map<Character, String> unicodeNumbers = new HashMap<>();
 
     @Override
     public void onEnable() {
+        saveDefaultConfig();
+        loadUnicodeNumbers();
         getServer().getPluginManager().registerEvents(this, this);
 
         // Schedule cleanup task every 10 ticks (0.5 seconds)
@@ -142,9 +147,28 @@ public class CpsCounter extends PluginBase implements Listener {
         return (int) queue.stream().filter(t -> t >= oneSecondAgo).count();
     }
 
+    private void loadUnicodeNumbers() {
+        Config config = getConfig();
+        Map<String, Object> mapping = config.getSection("unicode-numbers").getAllMap();
+        for (Map.Entry<String, Object> entry : mapping.entrySet()) {
+            String key = entry.getKey();
+            if (key.length() == 1) {
+                unicodeNumbers.put(key.charAt(0), String.valueOf(entry.getValue()));
+            }
+        }
+    }
+
+    private String toUnicode(int number) {
+        StringBuilder sb = new StringBuilder();
+        for (char c : String.valueOf(number).toCharArray()) {
+            sb.append(unicodeNumbers.getOrDefault(c, String.valueOf(c)));
+        }
+        return sb.toString();
+    }
+
     private void sendPopup(Player player) {
         int cps = getCps(player);
         int combo = getCombo(player);
-        player.sendTip(TextFormat.GRAY + "CPS: " + TextFormat.WHITE + cps + TextFormat.GRAY + " - Combo: " + TextFormat.WHITE + combo);
+        player.sendTip(TextFormat.GRAY + "CPS: " + TextFormat.WHITE + toUnicode(cps) + TextFormat.GRAY + " - Combo: " + TextFormat.WHITE + toUnicode(combo));
     }
 }
