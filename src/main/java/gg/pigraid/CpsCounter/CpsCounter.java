@@ -169,6 +169,6 @@ public class CpsCounter extends PluginBase implements Listener {
     private void sendPopup(Player player) {
         int cps = getCps(player);
         int combo = getCombo(player);
-        player.sendTip(TextFormat.GRAY + "CPS: " + TextFormat.WHITE + toUnicode(cps) + TextFormat.GRAY + " - Combo: " + TextFormat.WHITE + toUnicode(combo));
+        player.sendTip(TextFormat.GRAY + "ᰪᰫᰬ§7ᰭ§p" + TextFormat.WHITE + toUnicode(cps) + TextFormat.GRAY + " §7ᰮ §pᰰᰱᰲᰳᰱ§7ᰭ" + TextFormat.WHITE + toUnicode(combo));
     }
 }
